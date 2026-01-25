@@ -1,7 +1,6 @@
-# SO-100 Robotic Arm Control Suite
+# SO-101 Robotic Arm Control Suite
 
-A comprehensive Python toolkit for calibrating, controlling, and programming motion sequences on an SO-100 6-DOF robotic arm with Dynamixel servos. This suite includes scripts for calibration, manual control, path recording/replay, and a web-based GUI.
-
+A comprehensive Python toolkit for calibrating, controlling, and programming motion sequences on an SO-101 6-DOF robotic arm with Dynamixel servos. This suite includes scripts for calibration, manual control, path recording/replay, and a web-based GUI.
 ## Features
 
 - **Calibration**: Automated joint range detection and offset calculation for safe operation.
@@ -12,7 +11,7 @@ A comprehensive Python toolkit for calibrating, controlling, and programming mot
 
 ## Joint Configuration
 
-The SO-100 arm has 6 joints mapped as follows:
+The SO-101 arm has 6 joints mapped as follows:
 - ID 1: shoulder_pan
 - ID 2: shoulder_lift
 - ID 3: elbow_flex
