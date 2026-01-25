@@ -2,13 +2,13 @@
   "shoulder_pan": {
     "id": 1,
     "drive_mode": 0,
-    "range_min": 848,
-    "range_max": 3237,
-    "homing_offset": 2042,
+    "range_min": 1135,
+    "range_max": 3214,
+    "homing_offset": 2106,
     "logical_min": 0,
     "logical_max": 180,
-    "physical_min": 74.5,
-    "physical_max": 284.4
+    "physical_min": 96.0,
+    "physical_max": 274.4
   },
   "shoulder_lift": {
     "id": 2,
@@ -48,7 +48,7 @@
     "drive_mode": 0,
     "range_min": 216,
     "range_max": 3836,
-    "homing_offset": 2026,
+    "homing_offset": 2099,
     "logical_min": 0,
     "logical_max": 180,
     "physical_min": 19.0,

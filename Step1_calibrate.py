@@ -97,7 +97,8 @@ print("Calibration mode:")
 print("  1. Full calibration (all joints)")
 print("  2. Elbow only (re-calibrate just elbow_flex)")
 print("  3. Shoulder lift only (re-calibrate just shoulder_lift)")
-mode = input("Enter mode (1, 2, or 3): ").strip()
+print("  4. Shoulder pan only (re-calibrate just shoulder_pan)")
+mode = input("Enter mode (1, 2, 3, or 4): ").strip()
 
 if mode == "2":
     # Elbow-only calibration
@@ -256,7 +257,84 @@ elif mode == "3":
     print(f"\n✓ Shoulder lift calibration saved:")
     print(f"  min={shoulder_lift_data['min']:.1f}°, max={shoulder_lift_data['max']:.1f}°, center={center_deg:.1f}°")
     print(f"  (ticks: range_min={deg_to_ticks(shoulder_lift_data['min'])}, range_max={deg_to_ticks(shoulder_lift_data['max'])}, homing_offset={deg_to_ticks(center_deg)})")
-
+elif mode == "4":
+    # Shoulder pan-only calibration
+    print("\n=== Shoulder Pan-Only Calibration ===")
+    disable_servo(1)
+    time.sleep(0.1)
+    print("Shoulder pan torque disabled - move it freely.\n")
+    
+    print("Press ENTER to START recording shoulder pan positions...")
+    input()
+    
+    print("Recording shoulder pan positions. Move shoulder pan through full range. Press ENTER when done.\n")
+    print("Live positions:")
+    print("-" * 60)
+    print(f"{'Shoulder Pan Position':<25} | {'Min':<15} | {'Max':<15} | {'Range':<15}")
+    print("-" * 60)
+    
+    shoulder_pan_data = {"min": 360.0, "max": 0.0}
+    start_time = time.time()
+    sample_count = 0
+    
+    try:
+        import sys
+        import select
+        
+        while True:
+            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                input()
+                break
+            
+            angle = get_angle(1)
+            if angle is not None:
+                shoulder_pan_data["min"] = min(shoulder_pan_data["min"], angle)
+                shoulder_pan_data["max"] = max(shoulder_pan_data["max"], angle)
+            
+            current = angle if angle is not None else 0
+            range_span = shoulder_pan_data["max"] - shoulder_pan_data["min"]
+            print(f"\r{current:>8.1f}° | {shoulder_pan_data['min']:>13.1f}° | {shoulder_pan_data['max']:>13.1f}° | {range_span:>13.1f}°", end="", flush=True)
+            
+            sample_count += 1
+            time.sleep(0.1)
+    except Exception:
+        input("Press ENTER when done:")
+    
+    print(f"\n" + "-" * 60)
+    elapsed = time.time() - start_time
+    print(f"Recording complete! ({sample_count} samples in {elapsed:.1f}s)")
+    
+    # Check if valid range was recorded
+    if shoulder_pan_data["min"] >= shoulder_pan_data["max"] or shoulder_pan_data["min"] == 360.0:
+        print("ERROR: No valid shoulder pan angles recorded. Check servo connection and try again.")
+        exit(1)
+    
+    # Load existing calibration
+    try:
+        with open("calibration.json", "r") as f:
+            ticks_cal = json.load(f)
+    except FileNotFoundError:
+        ticks_cal = {}
+    
+    # Update only shoulder pan
+    def deg_to_ticks(deg): return int(round((float(deg) / 360.0) * 4095))
+    
+    center_deg = (shoulder_pan_data["min"] + shoulder_pan_data["max"]) / 2
+    ticks_cal["shoulder_pan"] = {
+        "id": 1,
+        "drive_mode": 0,
+        "range_min": deg_to_ticks(shoulder_pan_data["min"]),
+        "range_max": deg_to_ticks(shoulder_pan_data["max"]),
+        "homing_offset": deg_to_ticks(center_deg)
+    }
+    
+    # Save
+    with open("calibration.json", "w") as f:
+        json.dump(ticks_cal, f, indent=2)
+    
+    print(f"\n✓ Shoulder pan calibration saved:")
+    print(f"  min={shoulder_pan_data['min']:.1f}°, max={shoulder_pan_data['max']:.1f}°, center={center_deg:.1f}°")
+    print(f"  (ticks: range_min={deg_to_ticks(shoulder_pan_data['min'])}, range_max={deg_to_ticks(shoulder_pan_data['max'])}, homing_offset={deg_to_ticks(center_deg)})")
 else:
     # Full calibration (selective)
     print("\nEnter joints to calibrate (e.g., '1,2,3' for shoulder_pan, shoulder_lift, elbow_flex or 'all' for all joints):")
