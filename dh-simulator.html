@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DH Parameter Robot Arm Simulator - SO ARM 101</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .control-panel {
+            background: #ffffff;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .visualization {
+            position: relative;
+            background: #0a0e27;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #2a5298;
+            border-bottom: 3px solid #2a5298;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #1e3c72;
+        }
+
+        .dh-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .dh-table th {
+            background: #2a5298;
+            color: white;
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .dh-table td {
+            padding: 6px 4px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .dh-table input {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .joint-control {
+            margin-bottom: 8px;
+            padding: 8px 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #2a5298;
+        }
+
+        .joint-control label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 12px;
+        }
+
+        .joint-control input[type="range"] {
+            width: 100%;
+            margin: 0;
+        }
+
+        .joint-control .value-display {
+            font-size: 11px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            min-width: 45px;
+        }
+
+        .info-panel {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #2a5298;
+        }
+
+        .info-panel h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #1e3c72;
+        }
+
+        .info-panel .coord {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .info-panel .coord span:first-child {
+            font-weight: 600;
+            color: #2a5298;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-reset {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #c0392b;
+        }
+
+        .btn-export {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #229954;
+        }
+
+        .btn-home {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-home:hover {
+            background: #2980b9;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            min-width: 200px;
+        }
+
+        .overlay-info h4 {
+            margin-bottom: 10px;
+            color: #2a5298;
+            font-size: 14px;
+        }
+
+        .matrix-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            overflow-x: auto;
+        }
+
+        .matrix-display table {
+            border-collapse: collapse;
+        }
+
+        .matrix-display td {
+            padding: 2px 6px;
+            text-align: right;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #2a5298;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #2a5298;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a5298;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1e3c72;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <h1>SO ARM 101 Simulator</h1>
+            <p class="subtitle">DH Parameter & Forward Kinematics</p>
+
+            <h2>DH Parameters</h2>
+            <table class="dh-table" id="dh-table">
+                <thead>
+                    <tr>
+                        <th>Joint</th>
+                        <th>θ (deg)</th>
+                        <th>d (mm)</th>
+                        <th>a (mm)</th>
+                        <th>α (deg)</th>
+                    </tr>
+                </thead>
+                <tbody id="dh-tbody">
+                </tbody>
+            </table>
+
+            <h2>Joint Controls</h2>
+            <div id="joint-controls"></div>
+
+            <div class="info-panel">
+                <h3>End Effector Position</h3>
+                <div class="coord">
+                    <span>X:</span>
+                    <span id="ee-x">0.000 mm</span>
+                </div>
+                <div class="coord">
+                    <span>Y:</span>
+                    <span id="ee-y">0.000 mm</span>
+                </div>
+                <div class="coord">
+                    <span>Z:</span>
+                    <span id="ee-z">0.000 mm</span>
+                </div>
+                
+                <div class="matrix-display" id="transformation-matrix">
+                    <strong>Transformation Matrix:</strong>
+                    <div id="matrix-content"></div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-home" onclick="goToHome()">Home</button>
+                <button class="btn-reset" onclick="resetJoints()">Reset</button>
+                <button class="btn-export" onclick="exportDH()">Export</button>
+            </div>
+
+            <h2>Display Options</h2>
+            <div style="padding: 10px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
+                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-joint-labels" checked onchange="toggleJointLabels(this.checked)" style="margin-right: 8px;">
+                    Show Joint Labels
+                </label>
+                <label style="display: block; cursor: pointer;">
+                    <input type="checkbox" id="toggle-link-lengths" checked onchange="toggleLinkLengths(this.checked)" style="margin-right: 8px;">
+                    Show Link Lengths
+                </label>
+            </div>
+
+            <h2>DH Parameters Guide</h2>
+            <div style="padding: 10px; background: #fff3cd; border-radius: 8px; margin-top: 10px; border: 2px solid #ffc107;">
+                <button onclick="toggleDHGuide()" style="width: 100%; padding: 8px; background: #ffc107; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                    Show/Hide DH Explanation
+                </button>
+                <div id="dh-guide" style="display: none; margin-top: 10px; font-size: 11px; line-height: 1.6; max-height: 300px; overflow-y: auto;">
+                    <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                        <strong style="color: #2a5298;">DH Parameters Explained:</strong>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li><strong>θ (theta)</strong>: Joint angle - rotation around Z-axis</li>
+                            <li><strong>d</strong>: Link offset - distance along Z-axis</li>
+                            <li><strong>a</strong>: Link length - distance along X-axis</li>
+                            <li><strong>α (alpha)</strong>: Link twist - rotation around X-axis</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="joint-explanations"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <div id="canvas-container"></div>
+            <div class="overlay-info">
+                <h4>DH Coordinate System</h4>
+                <div style="margin-top: 10px;">
+                    <div style="color: #ff0000; font-weight: 600;">■ X-Axis (Red)</div>
+                    <div style="color: #0000ff; font-weight: 600;">■ Y-Axis (Blue)</div>
+                    <div style="color: #00ff00; font-weight: 600;">■ Z-Axis (Green) ↑ UP</div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd;">
+                    <div style="font-weight: 600; margin-bottom: 5px;">Controls:</div>
+                    <div style="font-size: 11px; line-height: 1.6;">
+                        • Left Click + Drag: Rotate<br>
+                        • Right Click + Drag: Pan<br>
+                        • Scroll: Zoom
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // SO ARM 101 Default DH Parameters (6-DOF Revolute Joints)
+        // Calibrated from SOARM.png dimensions
+        // Base Z-axis pointing upward, typical vertical articulated arm configuration
+        // Note: Wrist Flex to gripper tip = 166mm total (servo axis to tip when pointing up)
+        const defaultDH = [
+            { theta: 0, d: 119, a: 0, alpha: 90 },          // Base (height from base to shoulder rotation 119mm)
+            { theta: 0, d: 0, a: 111, alpha: 0 },           // Shoulder (upper arm length 111mm)
+            { theta: 0, d: 0, a: 137, alpha: 0 },           // Elbow (lower arm length 137mm)
+            { theta: 0, d: 0, a: 0, alpha: 90 },            // Wrist Flex (perpendicular joint)
+            { theta: 0, d: 100, a: 0, alpha: 0 },           // Wrist Roll (wrist section length ~100mm)
+            { theta: 0, d: 66, a: 0, alpha: 0 }             // Gripper (gripper length to tip ~66mm) - Total: 166mm
+        ];
+
+        let dhParams = JSON.parse(JSON.stringify(defaultDH));
+        let jointAngles = [90, 90, 90, 90, 90, 90]; // Home position at 90 degrees for all joints
+        let showJointLabels = true;
+        let showLinkLengths = true;
+
+        // Three.js setup
+        let scene, camera, renderer, controls;
+        let armSegments = [];
+        let jointSpheres = [];
+        let coordinateFrames = [];
+        let endEffectorMarker;
+        let jointLabels = [];
+        let linkLabels = [];
+
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0e27);
+            
+            camera = new THREE.PerspectiveCamera(
+                60,
+                container.clientWidth / container.clientHeight,
+                1,
+                10000
+            );
+            camera.position.set(800, 600, 800);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(500, 500, 500);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-500, -500, -500);
+            scene.add(directionalLight2);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(1000, 20, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Main coordinate axes
+            createCoordinateAxes(scene, 200, new THREE.Vector3(0, 0, 0), true);
+
+            // Add base platform
+            createBasePlatform();
+
+            // OrbitControls
+            addOrbitControls();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function addOrbitControls() {
+            const OrbitControls = function(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                
+                this.rotateSpeed = 0.5;
+                this.zoomSpeed = 1.2;
+                this.panSpeed = 0.8;
+                
+                let isRotating = false;
+                let isPanning = false;
+                let previousMousePosition = { x: 0, y: 0 };
+                
+                const spherical = {
+                    radius: Math.sqrt(
+                        camera.position.x ** 2 + 
+                        camera.position.y ** 2 + 
+                        camera.position.z ** 2
+                    ),
+                    theta: Math.atan2(camera.position.x, camera.position.z),
+                    phi: Math.acos(camera.position.y / Math.sqrt(
+                        camera.position.x ** 2 + 
+                        camera.position.y ** 2 + 
+                        camera.position.z ** 2
+                    ))
+                };
+                
+                const target = new THREE.Vector3(0, 0, 0);
+                
+                domElement.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) isRotating = true;
+                    if (e.button === 2) isPanning = true;
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                });
+                
+                domElement.addEventListener('mouseup', () => {
+                    isRotating = false;
+                    isPanning = false;
+                });
+                
+                domElement.addEventListener('mousemove', (e) => {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+                    
+                    if (isRotating) {
+                        spherical.theta -= deltaX * 0.01 * this.rotateSpeed;
+                        spherical.phi -= deltaY * 0.01 * this.rotateSpeed;
+                        spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                        updateCameraPosition();
+                    }
+                    
+                    if (isPanning) {
+                        const panX = -deltaX * this.panSpeed;
+                        const panY = deltaY * this.panSpeed;
+                        
+                        const right = new THREE.Vector3();
+                        const up = new THREE.Vector3(0, 1, 0);
+                        right.crossVectors(camera.position.clone().sub(target).normalize(), up);
+                        
+                        target.add(right.multiplyScalar(panX * 0.5));
+                        target.add(up.multiplyScalar(panY * 0.5));
+                        updateCameraPosition();
+                    }
+                    
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                });
+                
+                domElement.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    spherical.radius *= (e.deltaY > 0 ? this.zoomSpeed : 1 / this.zoomSpeed);
+                    spherical.radius = Math.max(100, Math.min(3000, spherical.radius));
+                    updateCameraPosition();
+                });
+                
+                domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                function updateCameraPosition() {
+                    camera.position.x = target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+                    camera.position.y = target.y + spherical.radius * Math.cos(spherical.phi);
+                    camera.position.z = target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+                    camera.lookAt(target);
+                }
+            };
+            
+            controls = new OrbitControls(camera, renderer.domElement);
+        }
+
+        function createTextSprite(text, color = '#ffffff', size = 32) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 256;
+            
+            context.fillStyle = color;
+            context.font = `Bold ${size}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            // Add text outline for better visibility
+            context.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            context.lineWidth = 4;
+            context.strokeText(text, 256, 128);
+            context.fillText(text, 256, 128);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(100, 50, 1);
+            
+            return sprite;
+        }
+
+        function createLabelLine(startPos, endPos, color = 0xffffff) {
+            const points = [startPos, endPos];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            const line = new THREE.Line(geometry, material);
+            return line;
+        }
+
+        function createBasePlatform() {
+            // Create a cylindrical base platform
+            const baseGeometry = new THREE.CylinderGeometry(60, 80, 20, 32);
+            const baseMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x2c3e50,
+                shininess: 30
+            });
+            const basePlatform = new THREE.Mesh(baseGeometry, baseMaterial);
+            basePlatform.position.set(0, -10, 0);
+            scene.add(basePlatform);
+
+            // Add a ring to show it's the base
+            const ringGeometry = new THREE.TorusGeometry(70, 3, 16, 100);
+            const ringMaterial = new THREE.MeshPhongMaterial({ color: 0xf39c12 });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.set(0, 1, 0);
+            ring.rotation.x = Math.PI / 2;
+            scene.add(ring);
+        }
+
+        function createReferenceCube() {
+            const cubeSize = 100;
+            const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+            
+            // Create materials for each face with different colors
+            const materials = [
+                new THREE.MeshPhongMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.3 }), // Right (X+)
+                new THREE.MeshPhongMaterial({ color: 0x4ecdc4, transparent: true, opacity: 0.3 }), // Left (X-)
+                new THREE.MeshPhongMaterial({ color: 0x95e1d3, transparent: true, opacity: 0.3 }), // Top (Y+)
+                new THREE.MeshPhongMaterial({ color: 0xf38181, transparent: true, opacity: 0.3 }), // Bottom (Y-)
+                new THREE.MeshPhongMaterial({ color: 0xaa96da, transparent: true, opacity: 0.3 }), // Front (Z+)
+                new THREE.MeshPhongMaterial({ color: 0xfcbad3, transparent: true, opacity: 0.3 })  // Back (Z-)
+            ];
+            
+            const cube = new THREE.Mesh(cubeGeometry, materials);
+            cube.position.set(-300, cubeSize/2, -300);
+            scene.add(cube);
+            
+            // Add edge lines to make cube more visible
+            const edges = new THREE.EdgesGeometry(cubeGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+            const wireframe = new THREE.LineSegments(edges, lineMaterial);
+            wireframe.position.copy(cube.position);
+            scene.add(wireframe);
+            
+            // Add labels to each face
+            const labelOffset = cubeSize / 2 + 20;
+            
+            // Right (X+)
+            const rightLabel = createTextSprite('RIGHT', '#ff6b6b', 28);
+            rightLabel.position.set(-300 + labelOffset, cubeSize/2, -300);
+            scene.add(rightLabel);
+            
+            // Left (X-)
+            const leftLabel = createTextSprite('LEFT', '#4ecdc4', 28);
+            leftLabel.position.set(-300 - labelOffset, cubeSize/2, -300);
+            scene.add(leftLabel);
+            
+            // Top (Y+)
+            const topLabel = createTextSprite('TOP', '#95e1d3', 28);
+            topLabel.position.set(-300, cubeSize/2 + labelOffset, -300);
+            scene.add(topLabel);
+            
+            // Bottom (Y-)
+            const bottomLabel = createTextSprite('BOTTOM', '#f38181', 28);
+            bottomLabel.position.set(-300, cubeSize/2 - labelOffset, -300);
+            scene.add(bottomLabel);
+            
+            // Front (Z+)
+            const frontLabel = createTextSprite('FRONT', '#aa96da', 28);
+            frontLabel.position.set(-300, cubeSize/2, -300 + labelOffset);
+            scene.add(frontLabel);
+            
+            // Back (Z-)
+            const backLabel = createTextSprite('BACK', '#fcbad3', 28);
+            backLabel.position.set(-300, cubeSize/2, -300 - labelOffset);
+            scene.add(backLabel);
+        }
+
+        function createCoordinateAxes(parent, size, position, isMain = false) {
+            const axesGroup = new THREE.Group();
+            axesGroup.position.copy(position);
+
+            const arrowLength = isMain ? size : size * 0.8;
+            const arrowWidth = isMain ? 3 : 2;
+
+            // X-axis (Red)
+            const xAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0xff0000,
+                arrowLength * 0.2,
+                arrowLength * 0.1
+            );
+            xAxis.line.material.linewidth = arrowWidth;
+            axesGroup.add(xAxis);
+
+            // Y-axis (Green)
+            const yAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0x00ff00,
+                arrowLength * 0.2,
+                arrowLength * 0.1
+            );
+            yAxis.line.material.linewidth = arrowWidth;
+            axesGroup.add(yAxis);
+
+            // Z-axis (Blue)
+            const zAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0x0000ff,
+                arrowLength * 0.2,
+                arrowLength * 0.1
+            );
+            zAxis.line.material.linewidth = arrowWidth;
+            axesGroup.add(zAxis);
+
+            if (isMain) {
+                // Add text labels for main axes (DH convention: Z-up)
+                // In Three.js: X=X, Y=Z, Z=-Y (to match DH Z-up convention)
+                const xLabel = createTextSprite('X', '#ff0000', 40);
+                xLabel.position.set(arrowLength + 30, 0, 0);
+                axesGroup.add(xLabel);
+
+                const yLabel = createTextSprite('Z', '#00ff00', 40);  // Y-axis in Three.js = Z in DH
+                yLabel.position.set(0, arrowLength + 30, 0);
+                axesGroup.add(yLabel);
+
+                const zLabel = createTextSprite('Y', '#0000ff', 40);  // Z-axis in Three.js = -Y in DH
+                zLabel.position.set(0, 0, arrowLength + 30);
+                axesGroup.add(zLabel);
+            }
+
+            parent.add(axesGroup);
+            return axesGroup;
+        }
+
+        function degToRad(deg) {
+            return deg * Math.PI / 180;
+        }
+
+        function radToDeg(rad) {
+            return rad * 180 / Math.PI;
+        }
+
+        function createDHMatrix(theta, d, a, alpha) {
+            const ct = Math.cos(degToRad(theta));
+            const st = Math.sin(degToRad(theta));
+            const ca = Math.cos(degToRad(alpha));
+            const sa = Math.sin(degToRad(alpha));
+
+            return [
+                [ct, -st * ca, st * sa, a * ct],
+                [st, ct * ca, -ct * sa, a * st],
+                [0, sa, ca, d],
+                [0, 0, 0, 1]
+            ];
+        }
+
+        function multiplyMatrices(a, b) {
+            const result = Array(4).fill(0).map(() => Array(4).fill(0));
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    for (let k = 0; k < 4; k++) {
+                        result[i][j] += a[i][k] * b[k][j];
+                    }
+                }
+            }
+            return result;
+        }
+
+        function calculateForwardKinematics() {
+            const transformations = [];
+            let T = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+
+            for (let i = 0; i < dhParams.length; i++) {
+                // Convert from 0-180 range (90 = home) to -90 to +90 range
+                let jointOffset;
+                if (i === 0) {
+                    // Joint 1 (base): invert direction (0 and 180 swapped)
+                    jointOffset = -(jointAngles[i] - 90);
+                } else if (i === 1) {
+                    // Joint 2 (shoulder): invert direction and add 90 degree offset
+                    jointOffset = -(jointAngles[i] - 90) + 90;
+                } else if (i === 2) {
+                    // Joint 3 (elbow): 90 becomes new 0, inverted and shifted
+                    jointOffset = -(jointAngles[i] - 90) - 90;
+                } else if (i === 3) {
+                    // Joint 4 (wrist roll): inverted (0↔180) plus 90 degree rotation
+                    jointOffset = -(jointAngles[i] - 90) + 90;
+                } else if (i === 4) {
+                    // Joint 5 (wrist pitch): invert direction (rotates like base)
+                    jointOffset = -(jointAngles[i] - 90);
+                } else if (i === 5) {
+                    // Joint 6 (gripper): fixed, no rotation - always 0
+                    jointOffset = 0;
+                } else {
+                    jointOffset = jointAngles[i] - 90;
+                }
+                
+                const theta = dhParams[i].theta + jointOffset;
+                const d = dhParams[i].d;
+                const a = dhParams[i].a;
+                const alpha = dhParams[i].alpha;
+
+                const Ti = createDHMatrix(theta, d, a, alpha);
+                T = multiplyMatrices(T, Ti);
+                transformations.push(JSON.parse(JSON.stringify(T)));
+            }
+
+            return { transformations, finalTransform: T };
+        }
+
+        function updateRobotVisualization() {
+            // Clear previous arm segments
+            armSegments.forEach(seg => scene.remove(seg));
+            jointSpheres.forEach(sphere => scene.remove(sphere));
+            coordinateFrames.forEach(frame => scene.remove(frame));
+            jointLabels.forEach(label => scene.remove(label));
+            linkLabels.forEach(label => scene.remove(label));
+            if (endEffectorMarker) scene.remove(endEffectorMarker);
+
+            armSegments = [];
+            jointSpheres = [];
+            coordinateFrames = [];
+            jointLabels = [];
+            linkLabels = [];
+
+            const { transformations, finalTransform } = calculateForwardKinematics();
+
+            // Create a group for the entire arm that rotates with Joint 1
+            const armGroup = new THREE.Group();
+            // Convert from 0-180 range (90 = home) to rotation angle
+            // For base motor: invert direction (0 and 180 swapped)
+            const joint1Angle = -(jointAngles[0] - 90);
+            armGroup.rotation.y = degToRad(joint1Angle); // Rotate around Y-axis (Z in DH)
+            scene.add(armGroup);
+            armSegments.push(armGroup);
+
+            // Draw base motor indicator (fixed, doesn't rotate)
+            const baseMotorGeometry = new THREE.CylinderGeometry(25, 25, 50, 32);
+            const baseMotorMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x34495e,
+                shininess: 80,
+                emissive: 0x1a1a1a
+            });
+            const baseMotor = new THREE.Mesh(baseMotorGeometry, baseMotorMaterial);
+            baseMotor.position.set(0, 25, 0);
+            scene.add(baseMotor);
+            armSegments.push(baseMotor);
+
+            // Add bright yellow arrow showing base rotation axis (pointing UP)
+            const baseAxisArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),  // Pointing up
+                new THREE.Vector3(0, 50, 0),
+                80,
+                0xffff00,
+                25,
+                15
+            );
+            baseAxisArrow.line.material.linewidth = 5;
+            scene.add(baseAxisArrow);
+            armSegments.push(baseAxisArrow);
+
+            // Add label for base motor
+            if (showJointLabels) {
+                const baseLabel = createTextSprite('BASE', '#ffff00', 42);
+                const baseLabelPos = new THREE.Vector3(60, 60, 0);
+                baseLabel.position.copy(baseLabelPos);
+                scene.add(baseLabel);
+                armSegments.push(baseLabel);
+                
+                // Add line connecting to base
+                const baseLabelLine = createLabelLine(new THREE.Vector3(0, 25, 0), baseLabelPos, 0xffff00);
+                scene.add(baseLabelLine);
+                armSegments.push(baseLabelLine);
+            }
+
+            // Get positions in the frame AFTER Joint 1 rotation
+            // We need to calculate positions without Joint 1's theta
+            const localTransformations = [];
+            let T_local = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+            
+            for (let i = 0; i < dhParams.length; i++) {
+                // Convert from 0-180 range (90 = home) to -90 to +90 range
+                let jointOffset;
+                if (i === 0) {
+                    // Joint 1 (base): invert direction (0 and 180 swapped)
+                    jointOffset = -(jointAngles[i] - 90);
+                } else if (i === 1) {
+                    // Joint 2 (shoulder): invert direction and add 90 degree offset
+                    jointOffset = -(jointAngles[i] - 90) + 90;
+                } else if (i === 2) {
+                    // Joint 3 (elbow): 90 becomes new 0, inverted and shifted
+                    jointOffset = -(jointAngles[i] - 90) - 90;
+                } else if (i === 3) {
+                    // Joint 4 (wrist roll): inverted (0↔180) plus 90 degree rotation
+                    jointOffset = -(jointAngles[i] - 90) + 90;
+                } else if (i === 4) {
+                    // Joint 5 (wrist pitch): invert direction (rotates like base)
+                    jointOffset = -(jointAngles[i] - 90);
+                } else if (i === 5) {
+                    // Joint 6 (gripper): fixed, no rotation - always 0
+                    jointOffset = 0;
+                } else {
+                    jointOffset = jointAngles[i] - 90;
+                }
+                
+                const theta = (i === 0 ? 0 : dhParams[i].theta + jointOffset); // Exclude Joint 1 rotation
+                const d = dhParams[i].d;
+                const a = dhParams[i].a;
+                const alpha = dhParams[i].alpha;
+
+                const Ti = createDHMatrix(theta, d, a, alpha);
+                T_local = multiplyMatrices(T_local, Ti);
+                localTransformations.push(JSON.parse(JSON.stringify(T_local)));
+            }
+
+            let prevPosition = new THREE.Vector3(0, 0, 0);
+
+            // Draw each joint and link (these will rotate with the arm group)
+            for (let i = 0; i < localTransformations.length; i++) {
+                const T = localTransformations[i];
+                // Convert DH coordinates (X,Y,Z) to Three.js coordinates (X,Z,-Y) 
+                // DH: Z-up, Three.js: Y-up
+                const position = new THREE.Vector3(T[0][3], T[2][3], -T[1][3]);
+
+                // Draw link
+                const linkLength = prevPosition.distanceTo(position);
+                if (linkLength > 0.1) {
+                    const linkGeometry = new THREE.CylinderGeometry(8, 8, linkLength, 8);
+                    const linkMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x3498db,
+                        shininess: 80
+                    });
+                    const link = new THREE.Mesh(linkGeometry, linkMaterial);
+
+                    const midPoint = new THREE.Vector3().addVectors(prevPosition, position).multiplyScalar(0.5);
+                    link.position.copy(midPoint);
+                    link.lookAt(position);
+                    link.rotateX(Math.PI / 2);
+
+                    armGroup.add(link);
+
+                    // Add link length label
+                    if (showLinkLengths) {
+                        const linkLengthLabel = createTextSprite(`${linkLength.toFixed(0)}mm`, '#ffffff', 48);
+                        const labelPos = midPoint.clone();
+                        // Offset label away from the arm
+                        labelPos.x += 80;
+                        labelPos.y += 40;
+                        linkLengthLabel.position.copy(labelPos);
+                        armGroup.add(linkLengthLabel);
+                        linkLabels.push(linkLengthLabel);
+                        
+                        // Add line connecting label to link midpoint
+                        const labelLine = createLabelLine(midPoint, labelPos, 0xaaaaaa);
+                        armGroup.add(labelLine);
+                        linkLabels.push(labelLine);
+                    }
+                }
+
+                // Draw joint - special visualization for Joint 5 (wrist motor)
+                if (i === 4) {
+                    // Joint 5 - Draw like base motor but smaller (perpendicular gripper mount)
+                    // Get the rotation from J4's transformation matrix for alignment
+                    const T_J4 = localTransformations[3];
+                    const j4RotMatrix = new THREE.Matrix4();
+                    j4RotMatrix.set(
+                        T_J4[0][0], T_J4[0][2], -T_J4[0][1], T_J4[0][3],
+                        T_J4[2][0], T_J4[2][2], -T_J4[2][1], T_J4[2][3],
+                        -T_J4[1][0], -T_J4[1][2], T_J4[1][1], T_J4[1][3],
+                        0, 0, 0, 1
+                    );
+                    
+                    const wristMotorGeometry = new THREE.CylinderGeometry(15, 15, 30, 32);
+                    const wristMotorMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0x34495e,
+                        shininess: 80,
+                        emissive: 0x1a1a1a
+                    });
+                    const wristMotor = new THREE.Mesh(wristMotorGeometry, wristMotorMaterial);
+                    wristMotor.position.copy(position);
+                    
+                    // Align with J4's orientation
+                    wristMotor.setRotationFromMatrix(j4RotMatrix);
+                    armGroup.add(wristMotor);
+                    
+                    // Add arrow showing wrist rotation axis (perpendicular to motor body)
+                    const wristAxisArrow = new THREE.ArrowHelper(
+                        new THREE.Vector3(0, 1, 0),
+                        position,
+                        40,
+                        0xff9800,
+                        12,
+                        8
+                    );
+                    wristAxisArrow.setRotationFromMatrix(j4RotMatrix);
+                    armGroup.add(wristAxisArrow);
+                    
+                    // Add label for wrist roll motor
+                    if (showJointLabels) {
+                        const wristLabel = createTextSprite('Wrist Roll', '#ff9800', 38);
+                        const labelPos = position.clone();
+                        labelPos.y += 80;
+                        labelPos.x += 60;
+                        wristLabel.position.copy(labelPos);
+                        armGroup.add(wristLabel);
+                        jointLabels.push(wristLabel);
+                        
+                        // Add line connecting label to wrist roll
+                        const labelLine = createLabelLine(position, labelPos, 0xff9800);
+                        armGroup.add(labelLine);
+                        jointLabels.push(labelLine);
+                    }
+                } else if (i === 5) {
+                    // Gripper - simple yellow dot at end effector position
+                    const gripperDotGeometry = new THREE.SphereGeometry(10, 16, 16);
+                    const gripperDotMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0xffff00,
+                        emissive: 0xffff00,
+                        emissiveIntensity: 0.4,
+                        shininess: 100
+                    });
+                    const gripperDot = new THREE.Mesh(gripperDotGeometry, gripperDotMaterial);
+                    gripperDot.position.copy(position);
+                    armGroup.add(gripperDot);
+
+                    // Add gripper label
+                    if (showJointLabels) {
+                        const gripperLabel = createTextSprite('GRIPPER', '#ffff00', 42);
+                        const labelPos = position.clone();
+                        labelPos.y += 60;
+                        labelPos.x += 60;
+                        gripperLabel.position.copy(labelPos);
+                        armGroup.add(gripperLabel);
+                        jointLabels.push(gripperLabel);
+                        
+                        // Add line connecting label to gripper
+                        const labelLine = createLabelLine(position, labelPos, 0xffff00);
+                        armGroup.add(labelLine);
+                        jointLabels.push(labelLine);
+                    }
+                } else {
+                    // Regular joint sphere for other joints
+                    const jointGeometry = new THREE.SphereGeometry(12, 16, 16);
+                    const jointMaterial = new THREE.MeshPhongMaterial({ 
+                        color: 0xe74c3c,
+                        shininess: 100
+                    });
+                    const joint = new THREE.Mesh(jointGeometry, jointMaterial);
+                    joint.position.copy(position);
+                    armGroup.add(joint);
+
+                    // Add joint label for regular joints
+                    if (showJointLabels) {
+                        // Joint sequence: Base -> Shoulder -> Elbow -> Wrist Flex -> Wrist Roll -> Gripper
+                        // i=0: Shoulder, i=1: Elbow, i=2: Wrist Flex, i=3: (skip - has special label), i=4: Wrist Roll (motor), i=5: Gripper
+                        const jointNames = ['Shoulder', 'Elbow', 'Wrist Flex', 'Wrist Flex'];
+                        const jointLabel = createTextSprite(jointNames[i], '#ffffff', 42);
+                        const labelPos = position.clone();
+                        labelPos.y += 60;
+                        labelPos.x += 60;
+                        jointLabel.position.copy(labelPos);
+                        armGroup.add(jointLabel);
+                        jointLabels.push(jointLabel);
+                        
+                        // Add line connecting label to joint
+                        const labelLine = createLabelLine(position, labelPos, 0xffffff);
+                        armGroup.add(labelLine);
+                        jointLabels.push(labelLine);
+                    }
+                }
+
+                // Draw coordinate frame at each joint (except gripper)
+                if (i < 5) {
+                    const frame = createCoordinateAxes(armGroup, 80, position, false);
+                    
+                    // Orient the frame according to transformation matrix
+                    // Convert DH rotation to Three.js rotation (swap Y and Z axes)
+                    const rotMatrix = new THREE.Matrix4();
+                    rotMatrix.set(
+                        T[0][0], T[0][2], -T[0][1], T[0][3],
+                        T[2][0], T[2][2], -T[2][1], T[2][3],
+                        -T[1][0], -T[1][2], T[1][1], T[1][3],
+                        0, 0, 0, 1
+                    );
+                    frame.setRotationFromMatrix(rotMatrix);
+                    coordinateFrames.push(frame);
+                }
+
+                prevPosition = position;
+            }
+
+            // Draw end effector marker
+            const eeGeometry = new THREE.SphereGeometry(15, 16, 16);
+            const eeMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xf39c12,
+                emissive: 0xf39c12,
+                emissiveIntensity: 0.3
+            });
+            endEffectorMarker = new THREE.Mesh(eeGeometry, eeMaterial);
+            // Convert DH coordinates to Three.js coordinates
+            endEffectorMarker.position.set(
+                finalTransform[0][3],
+                finalTransform[2][3],
+                -finalTransform[1][3]
+            );
+            scene.add(endEffectorMarker);
+
+            // Update UI
+            updateEndEffectorDisplay(finalTransform);
+        }
+
+        function updateEndEffectorDisplay(T) {
+            document.getElementById('ee-x').textContent = T[0][3].toFixed(3) + ' mm';
+            document.getElementById('ee-y').textContent = T[1][3].toFixed(3) + ' mm';
+            document.getElementById('ee-z').textContent = T[2][3].toFixed(3) + ' mm';
+
+            // Display transformation matrix
+            let matrixHTML = '<table style="margin-top: 8px;">';
+            for (let i = 0; i < 4; i++) {
+                matrixHTML += '<tr>';
+                for (let j = 0; j < 4; j++) {
+                    matrixHTML += `<td>${T[i][j].toFixed(3)}</td>`;
+                }
+                matrixHTML += '</tr>';
+            }
+            matrixHTML += '</table>';
+            document.getElementById('matrix-content').innerHTML = matrixHTML;
+        }
+
+        function initDHTable() {
+            const tbody = document.getElementById('dh-tbody');
+            tbody.innerHTML = '';
+
+            const jointNames = ['Base', 'Shoulder', 'Elbow', 'Wrist Flex', 'Wrist Roll', 'Gripper'];
+
+            dhParams.forEach((param, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${jointNames[i]}</strong></td>
+                    <td><input type="number" step="0.1" value="${param.theta}" 
+                        onchange="updateDHParam(${i}, 'theta', this.value)" /></td>
+                    <td><input type="number" step="1" value="${param.d}" 
+                        onchange="updateDHParam(${i}, 'd', this.value)" /></td>
+                    <td><input type="number" step="1" value="${param.a}" 
+                        onchange="updateDHParam(${i}, 'a', this.value)" /></td>
+                    <td><input type="number" step="0.1" value="${param.alpha}" 
+                        onchange="updateDHParam(${i}, 'alpha', this.value)" /></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateDHParam(index, param, value) {
+            dhParams[index][param] = parseFloat(value);
+            updateRobotVisualization();
+        }
+
+        function initJointControls() {
+            const container = document.getElementById('joint-controls');
+            container.innerHTML = '';
+
+            const jointNames = ['Base', 'Shoulder', 'Elbow', 'Wrist Flex', 'Wrist Roll', 'Gripper'];
+
+            jointAngles.forEach((angle, i) => {
+                const control = document.createElement('div');
+                control.className = 'joint-control';
+                
+                // Joint 6 is gripper - no rotation control
+                if (i === 5) {
+                    control.innerHTML = `
+                        <label>
+                            <span>${jointNames[i]} (Fixed)</span>
+                        </label>
+                        <div style="text-align: center; padding: 5px; background: #e0e0e0; border-radius: 3px; font-size: 10px;">No Rotation</div>
+                    `;
+                } else {
+                    control.innerHTML = `
+                        <label>
+                            <span>${jointNames[i]}</span>
+                            <span class="value-display" id="joint-${i}-value">${angle.toFixed(1)}°</span>
+                        </label>
+                        <input type="range" min="0" max="180" step="1" value="${angle}" 
+                            id="joint-${i}" oninput="updateJointAngle(${i}, this.value)" />
+                    `;
+                }
+                container.appendChild(control);
+            });
+        }
+
+        function updateJointAngle(index, value) {
+            let angle = parseFloat(value);
+            
+            // Snap to key angles (0, 90, 180) if within 5 degrees
+            const snapThreshold = 5;
+            const snapAngles = [0, 90, 180];
+            
+            for (let snapAngle of snapAngles) {
+                if (Math.abs(angle - snapAngle) <= snapThreshold) {
+                    angle = snapAngle;
+                    document.getElementById(`joint-${index}`).value = angle;
+                    break;
+                }
+            }
+            
+            jointAngles[index] = angle;
+            document.getElementById(`joint-${index}-value`).textContent = angle.toFixed(1) + '°';
+            updateRobotVisualization();
+        }
+
+        function resetJoints() {
+            jointAngles = [0, 0, 0, 0, 0, 0];
+            initJointControls();
+            updateRobotVisualization();
+        }
+
+        function goToHome() {
+            jointAngles = [90, 90, 90, 90, 90, 90];
+            initJointControls();
+            updateRobotVisualization();
+        }
+
+        function exportDH() {
+            const data = {
+                dhParameters: dhParams,
+                currentJointAngles: jointAngles,
+                timestamp: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SO_ARM_101_DH_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleJointLabels(show) {
+            showJointLabels = show;
+            updateRobotVisualization();
+        }
+
+        function toggleLinkLengths(show) {
+            showLinkLengths = show;
+            updateRobotVisualization();
+        }
+
+        function toggleDHGuide() {
+            const guide = document.getElementById('dh-guide');
+            if (guide.style.display === 'none') {
+                guide.style.display = 'block';
+                populateDHExplanations();
+            } else {
+                guide.style.display = 'none';
+            }
+        }
+
+        function populateDHExplanations() {
+            const container = document.getElementById('joint-explanations');
+            
+            const explanations = [
+                {
+                    joint: 'Base',
+                    theta: 'Variable (0-180°) - Controls base rotation around vertical axis',
+                    d: '119mm - Height from ground to shoulder joint (fixed)',
+                    a: '0mm - No horizontal offset at base',
+                    alpha: '90° - Rotates frame so next joint is horizontal',
+                    how: 'Measured from base platform to center of shoulder servo axis. The 90° twist makes the shoulder joint perpendicular to base.'
+                },
+                {
+                    joint: 'Shoulder',
+                    theta: 'Variable (0-180°) - Controls shoulder lift angle',
+                    d: '0mm - No vertical offset',
+                    a: '111mm - Upper arm length (shoulder to elbow)',
+                    alpha: '0° - Keeps elbow in same plane as shoulder',
+                    how: 'Measured from shoulder servo center to elbow servo center. This is the upper arm link length.'
+                },
+                {
+                    joint: 'Elbow',
+                    theta: 'Variable (0-180°) - Controls elbow bend angle',
+                    d: '0mm - No vertical offset',
+                    a: '137mm - Lower arm length (elbow to wrist)',
+                    alpha: '0° - Keeps wrist in same plane as elbow',
+                    how: 'Measured from elbow servo center to wrist flex servo center. This is the forearm link length.'
+                },
+                {
+                    joint: 'Wrist Flex',
+                    theta: 'Variable (0-180°) - Controls wrist flex/bend',
+                    d: '0mm - No offset along previous axis',
+                    a: '0mm - No link length (perpendicular joint)',
+                    alpha: '90° - Rotates frame for wrist roll axis',
+                    how: 'This joint bends the wrist up/down. The 90° twist orients the next joint (wrist roll) to rotate around the arm axis.'
+                },
+                {
+                    joint: 'Wrist Roll',
+                    theta: 'Variable (0-180°) - Controls wrist rotation (like base)',
+                    d: '100mm - Distance from wrist flex to wrist roll servo',
+                    a: '0mm - No horizontal offset',
+                    alpha: '0° - Gripper extends straight',
+                    how: 'Measured along the arm axis from wrist flex servo to wrist roll servo center. This joint spins the gripper around.'
+                },
+                {
+                    joint: 'Gripper',
+                    theta: '0° - Fixed (no rotation)',
+                    d: '66mm - Gripper length to tip',
+                    a: '0mm - No offset',
+                    alpha: '0° - End of chain',
+                    how: 'Measured from wrist roll servo center to gripper tip. Total wrist section (100+66=166mm) from wrist flex to tip.'
+                }
+            ];
+
+            let html = '';
+            explanations.forEach((exp, i) => {
+                html += `
+                    <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 8px; border-left: 4px solid #2a5298;">
+                        <div style="font-weight: 600; color: #1e3c72; margin-bottom: 5px; font-size: 12px;">
+                            ${i + 1}. ${exp.joint}
+                        </div>
+                        <div style="margin-left: 10px; color: #555;">
+                            <div style="margin: 3px 0;"><strong>θ:</strong> ${exp.theta}</div>
+                            <div style="margin: 3px 0;"><strong>d:</strong> ${exp.d}</div>
+                            <div style="margin: 3px 0;"><strong>a:</strong> ${exp.a}</div>
+                            <div style="margin: 3px 0;"><strong>α:</strong> ${exp.alpha}</div>
+                            <div style="margin-top: 6px; padding: 6px; background: #f0f8ff; border-radius: 3px; font-style: italic; font-size: 10px;">
+                                <strong>How it's calculated:</strong> ${exp.how}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Initialize everything
+        window.addEventListener('load', () => {
+            initThreeJS();
+            initDHTable();
+            initJointControls();
+            updateRobotVisualization();
+        });
+    </script>
+</body>
+</html>

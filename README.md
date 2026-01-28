@@ -2,13 +2,16 @@
 
 A comprehensive Python toolkit for calibrating, controlling, and programming motion sequences on an SO-101 6-DOF robotic arm with Dynamixel servos. This suite includes scripts for calibration, manual control, path recording/replay, and a web-based GUI.
 ## Features
-
+- **Videos**: Videos showing the progress
 - **Calibration**: Automated joint range detection and offset calculation for safe operation.
 - **Manual Control**: Command-line interface for direct servo control with safety limits.
 - **Path Recording & Replay**: Record, edit, and execute multi-waypoint motion sequences.
 - **Web GUI**: Streamlit-based interface for interactive control and monitoring.
 - **Safety Features**: Torque control, joint limits, and inversion handling for drive modes.
-
+- **Forward Kinematics**: Compute end effector position from joint angles using DH parameters.
+## Video Links
+Manual Path Planning
+- https://www.youtube.com/shorts/QxqIxc3luc4
 ## Joint Configuration
 
 The SO-101 arm has 6 joints mapped as follows:
@@ -113,6 +116,33 @@ streamlit run Step2_Streamlit.py
 - Input fields for servo ID and degrees.
 - Real-time feedback in the Streamlit app.
 
+### fk_solver.py
+Forward kinematics solver using DH parameters from the simulator.
+
+**Usage:**
+```python
+from fk_solver import solve_fk
+
+# Example: Home position (all joints at logical 90°)
+logical_angles = [90, 90, 90, 90, 90, 90]
+position = solve_fk(logical_angles)
+print(f"End effector position: {position}")  # Output: [x, y, z] in mm
+```
+
+**Function Details:**
+- `solve_fk(logical_angles)`: Takes a list of 6 logical angles (0-180°) and returns [x, y, z] coordinates in mm.
+- Requires `calibration.json` in the same directory for angle conversions.
+- Uses fixed DH parameters from `dh-simulator.html`.
+
+**Running Examples:**
+```bash
+# Run the script directly for test examples
+python fk_solver.py
+
+# Or import and use in your code
+python -c "from fk_solver import solve_fk; print(solve_fk([90,90,90,90,90,90]))"
+```
+
 ## Configuration Files
 
 ### calibration.json
@@ -125,6 +155,32 @@ Stores joint calibration data in ticks format:
 
 ### paths.json
 Stores recorded paths as lists of waypoints (each waypoint is a list of 6 angles in degrees).
+
+## Forward Kinematics Solver
+
+The `fk_solver.py` script provides forward kinematics computation for the SO-101 arm:
+
+1. **Input**: 6 logical joint angles (0-180°) for [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper].
+2. **Processing**: Converts logical angles to physical angles using calibration data, then to joint angles for the DH solver.
+3. **Output**: End effector position [x, y, z] in millimeters.
+
+**Example Usage:**
+```python
+from fk_solver import solve_fk
+
+# Home position
+home_pos = solve_fk([90, 90, 90, 90, 90, 90])
+print(f"Home: {home_pos}")
+
+# Extended arm
+extended_pos = solve_fk([90, 0, 180, 90, 90, 90])
+print(f"Extended: {extended_pos}")
+```
+
+**Integration Notes:**
+- Ensure `calibration.json` is present and up-to-date.
+- Angles are in logical degrees (0-180), not physical servo positions.
+- Coordinates are in the base frame with Z-up convention.
 
 ## Calibration Process
 
