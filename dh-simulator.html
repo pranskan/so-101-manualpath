@@ -301,6 +301,13 @@
             <h2>Joint Controls</h2>
             <div id="joint-controls"></div>
 
+            <h2>Logical Angles (0-180°)</h2>
+            <div style="padding: 10px; background: #f0f8ff; border-radius: 8px; margin-bottom: 15px; border: 2px solid #2a5298;">
+                <p style="font-size: 11px; color: #666; margin-bottom: 10px;">Enter logical angles directly (useful for matching servo readings):</p>
+                <div id="logical-angle-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
+                <button onclick="applyLogicalAngles()" style="width: 100%; margin-top: 10px; padding: 8px; background: #2a5298; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 12px;">Apply Logical Angles</button>
+            </div>
+
             <div class="info-panel">
                 <h3>End Effector Position</h3>
                 <div class="coord">
@@ -391,7 +398,7 @@
         const defaultDH = [
             { theta: 0, d: 119, a: 0, alpha: 90 },          // Base (height from base to shoulder rotation 119mm)
             { theta: 0, d: 0, a: 111, alpha: 0 },           // Shoulder (upper arm length 111mm)
-            { theta: 0, d: 0, a: 137, alpha: 0 },           // Elbow (lower arm length 137mm)
+            { theta: 0, d: 0, a: 187, alpha: 0 },           // Elbow (lower arm length 187mm)
             { theta: 0, d: 0, a: 0, alpha: 90 },            // Wrist Flex (perpendicular joint)
             { theta: 0, d: 100, a: 0, alpha: 0 },           // Wrist Roll (wrist section length ~100mm)
             { theta: 0, d: 66, a: 0, alpha: 0 }             // Gripper (gripper length to tip ~66mm) - Total: 166mm
@@ -1195,6 +1202,7 @@
             
             jointAngles[index] = angle;
             document.getElementById(`joint-${index}-value`).textContent = angle.toFixed(1) + '°';
+            document.getElementById(`logical-${index}`).value = angle.toFixed(1);
             updateRobotVisualization();
         }
 
@@ -1207,7 +1215,50 @@
         function goToHome() {
             jointAngles = [90, 90, 90, 90, 90, 90];
             initJointControls();
+            initLogicalAngleInputs();
             updateRobotVisualization();
+        }
+
+        function initLogicalAngleInputs() {
+            const container = document.getElementById('logical-angle-inputs');
+            container.innerHTML = '';
+            const jointNames = ['Base', 'Shoulder', 'Elbow', 'Wrist Flex', 'Wrist Roll', 'Gripper'];
+
+            jointAngles.forEach((angle, i) => {
+                const inputGroup = document.createElement('div');
+                inputGroup.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
+                inputGroup.innerHTML = `
+                    <label style="font-size: 11px; font-weight: 600; color: #2a5298;">${jointNames[i]}</label>
+                    <input type="number" min="0" max="180" step="0.1" value="${angle.toFixed(1)}" 
+                        id="logical-${i}" style="padding: 6px; border: 1px solid #2a5298; border-radius: 3px; text-align: center; font-size: 12px;">
+                `;
+                container.appendChild(inputGroup);
+            });
+        }
+
+        function applyLogicalAngles() {
+            const jointNames = ['Base', 'Shoulder', 'Elbow', 'Wrist Flex', 'Wrist Roll', 'Gripper'];
+            let valid = true;
+            const newAngles = [];
+
+            for (let i = 0; i < 6; i++) {
+                const input = document.getElementById(`logical-${i}`);
+                const value = parseFloat(input.value);
+                
+                if (isNaN(value) || value < 0 || value > 180) {
+                    alert(`Invalid angle for ${jointNames[i]}: must be between 0 and 180`);
+                    valid = false;
+                    break;
+                }
+                newAngles.push(value);
+            }
+
+            if (valid) {
+                jointAngles = newAngles;
+                initJointControls();
+                updateRobotVisualization();
+                alert('Logical angles applied successfully!');
+            }
         }
 
         function exportDH() {
@@ -1340,6 +1391,7 @@
             initThreeJS();
             initDHTable();
             initJointControls();
+            initLogicalAngleInputs();
             updateRobotVisualization();
         });
     </script>

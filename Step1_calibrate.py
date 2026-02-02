@@ -1,14 +1,42 @@
 # Manual calibration for SO-100 follower arm (lerobot-compatible format)
 
 import serial
+import serial.tools.list_ports
 import time
 import json
 
-PORT = "/dev/tty.usbmodem5AE60848961"
 BAUD = 1000000
 
-ser = serial.Serial(PORT, BAUD, timeout=0.5)
-print("Connected to servo controller\n")
+def find_serial_port():
+    """Auto-detect available serial ports and connect to the robot."""
+    ports = serial.tools.list_ports.comports()
+    if not ports:
+        raise RuntimeError("No serial port found! Connect your robot.")
+    
+    print(f"Available ports: {[p.device for p in ports]}")
+    
+    # Try each port with different baud rates
+    baud_rates = [1000000, 921600, 460800, 230400, 115200]
+    
+    # Try COM4 first if available
+    ports_to_try = sorted(ports, key=lambda p: p.device, reverse=True)
+    
+    for port in ports_to_try:
+        for baud in baud_rates:
+            try:
+                print(f"Trying {port.device} at {baud} baud...", end=" ")
+                test_ser = serial.Serial(port.device, baud, timeout=0.5)
+                print("✓ Connected!")
+                return test_ser, port.device, baud
+            except Exception as e:
+                print("✗")
+                continue
+    
+    raise RuntimeError("Could not connect to any serial port!")
+
+ser, PORT, BAUD = find_serial_port()
+print(f"Connected to {PORT} at {BAUD} baud\n")
+time.sleep(0.2)  # Brief initialization wait
 
 def write_servo(servo_id, address, value, length=1):
     """Write to servo register"""
@@ -86,8 +114,8 @@ calibration_data = {
     "joint_names": joint_names,
     "joint_limits": {},
     "joint_offsets": {},
-    "port": "/dev/tty.usbmodem5AE60848961",
-    "baudrate": 1000000
+    "port": PORT,
+    "baudrate": BAUD
 }
 
 print("=== SO-100 Follower Arm Batch Calibration ===")

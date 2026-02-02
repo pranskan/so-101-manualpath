@@ -20,13 +20,13 @@
     "logical_max": 180,
     "physical_min": 104.4,
     "physical_max": 315.0
-  },
+  }, 
   "elbow_flex": {
     "id": 3,
     "drive_mode": 0,
     "range_min": 111,
     "range_max": 2182,
-    "homing_offset": 1146,
+    "homing_offset": 1100,
     "logical_min": 0,
     "logical_max": 180,
     "physical_min": 9.8,

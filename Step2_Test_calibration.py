@@ -1,13 +1,62 @@
 import serial
+import serial.tools.list_ports
 import time
 import json
 import os
 
-PORT = "/dev/tty.usbmodem5AE60848961"
 BAUD = 1000000
 
-ser = serial.Serial(PORT, BAUD, timeout=0.5)
-print("Connected to servo controller\n")
+def find_serial_port():
+    """Auto-detect available serial ports and connect to the robot with verified baud rate."""
+    ports = serial.tools.list_ports.comports()
+    if not ports:
+        raise RuntimeError("No serial port found! Connect your robot.")
+    
+    print(f"Available ports: {[p.device for p in ports]}")
+    
+    # Try each port with different baud rates (reverse order to try higher speeds first)
+    baud_rates = [1000000, 921600, 460800, 230400, 115200]
+    
+    # Try COM4 first if available
+    ports_to_try = sorted(ports, key=lambda p: p.device, reverse=True)
+    
+    for port in ports_to_try:
+        for baud in baud_rates:
+            try:
+                print(f"Trying {port.device} at {baud} baud...", end=" ", flush=True)
+                test_ser = serial.Serial(port.device, baud, timeout=0.5)
+                time.sleep(0.2)
+                
+                # Verify communication by scanning for servos
+                found_servo = False
+                for servo_id in range(1, 7):
+                    packet = [0xFF, 0xFF, servo_id, 2, 0x01]
+                    checksum = (~sum(packet[2:])) & 0xFF
+                    packet.append(checksum)
+                    test_ser.reset_input_buffer()
+                    test_ser.write(bytes(packet))
+                    time.sleep(0.05)
+                    resp = test_ser.read(20)
+                    if len(resp) > 0:
+                        found_servo = True
+                        break
+                
+                if found_servo:
+                    print("✓ Connected and verified!")
+                    return test_ser, port.device, baud
+                else:
+                    test_ser.close()
+                    print("✗ (no servos responded)")
+                    continue
+            except Exception as e:
+                print("✗")
+                continue
+    
+    raise RuntimeError("Could not connect to any serial port with responding servos!")
+
+ser, PORT, BAUD = find_serial_port()
+print(f"Connected to {PORT} at {BAUD} baud\n")
+time.sleep(0.2)  # Brief initialization wait
 
 def write_servo(servo_id, address, value, length=1):
     """Write to servo register"""
@@ -21,7 +70,7 @@ def write_servo(servo_id, address, value, length=1):
     packet.append(checksum)
     
     ser.write(bytes(packet))
-    time.sleep(0.01)
+    time.sleep(0.005)  # Minimal delay for 1000000 baud
     ser.read(20)
 
 def read_servo(servo_id, address, length=1):
@@ -34,8 +83,18 @@ def read_servo(servo_id, address, length=1):
     ser.reset_input_buffer()
     
     ser.write(bytes(packet))
-    time.sleep(0.15)
-    resp = ser.read(20)
+    time.sleep(0.02)  # Minimal delay for 1000000 baud
+    
+    # Read response
+    resp = b''
+    timeout_count = 0
+    while len(resp) < 20 and timeout_count < 5:
+        chunk = ser.read(1)
+        if chunk:
+            resp += chunk
+        else:
+            timeout_count += 1
+        time.sleep(0.0005)
     
     if len(resp) > 5 + length - 1:
         if length == 1:

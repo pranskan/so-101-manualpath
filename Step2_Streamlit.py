@@ -1,19 +1,44 @@
 import streamlit as st
 import serial
+import serial.tools.list_ports
 import time
 import json
 import os
 
 # Constants
-PORT = "/dev/tty.usbmodem5AE60848961"
 BAUD = 1000000
+
+def find_serial_port():
+    """Auto-detect available serial ports and try different baud rates."""
+    ports = serial.tools.list_ports.comports()
+    if not ports:
+        return None, None, None
+    
+    # Try each port with different baud rates
+    baud_rates = [1000000, 921600, 460800, 230400, 115200]
+    for port in ports:
+        for baud in baud_rates:
+            try:
+                print(f"Trying {port.device} at {baud} baud...", end=" ")
+                test_ser = serial.Serial(port.device, baud, timeout=0.5)
+                test_ser.close()
+                print("✓")
+                return port.device, baud, test_ser
+            except:
+                print("✗")
+    return None, None, None
+
+PORT, BAUD, _ = find_serial_port()
 
 @st.cache_resource
 def get_serial():
+    if PORT is None:
+        st.error("No serial port found! Please connect your robot.")
+        st.stop()
     try:
         return serial.Serial(PORT, BAUD, timeout=0.5)
     except serial.SerialException as e:
-        st.error(f"Failed to connect to serial port {PORT}: {e}")
+        st.error(f"Failed to connect to serial port {PORT} at {BAUD} baud: {e}")
         st.stop()
 
 ser = get_serial()
