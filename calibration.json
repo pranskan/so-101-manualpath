@@ -29,8 +29,8 @@
     "homing_offset": 1100,
     "logical_min": 0,
     "logical_max": 180,
-    "physical_min": 9.8,
-    "physical_max": 191.9
+    "physical_min": 0.0,
+    "physical_max": 360.0
   },
   "wrist_flex": {
     "id": 4,
