@@ -1,8 +1,10 @@
-# SO-101 Robotic Arm Control
+# SO-101 Robotic Arm - Manual Path Planning Control
 
-Unified control program for the SO-101 6-DOF arm with Dynamixel servos.
+A unified control system for the SO-101 6-DOF robotic arm that **emphasizes manual path planning and execution** as its core feature. Record motion sequences by moving the arm to key positions, save them, and replay them on demand.
 
-**Video:** https://www.youtube.com/shorts/QxqIxc3luc4
+**Videos:**
+- [Demo video](https://youtu.be/MSCIpeYgwzI) - Full workflow demonstration
+- [Quick clip](https://www.youtube.com/shorts/QxqIxc3luc4)
 
 ## Setup
 
@@ -28,40 +30,74 @@ python master_control.py
 
 ## Commands
 
+### 🎯 Manual Path Planning (Core Feature)
+
 | Command | Description |
 |---------|-------------|
-| **Setup** | |
+| `start <name>` | Start recording a new motion path |
+| `add` | Record current arm position as a waypoint |
+| `undo` | Remove the last recorded waypoint |
+| `wp` | List all waypoints in current path |
+| `wp_del <n>` | Delete waypoint #n |
+| `wp_replace <n>` | Replace waypoint #n with current position |
+| `wp_insert <n>` | Insert current position before waypoint #n |
+| `wp_goto <n>` | Move arm to waypoint #n |
+| `wp_swap <a> <b>` | Swap two waypoints |
+| `save` | Save recorded path to paths.json |
+| `cancel` | Discard current recording |
+| `list_paths` | List all saved paths |
+| `exec <name>` | Execute a saved path (replay) |
+| `smooth <name> [sec]` | Execute with smooth cubic spline interpolation |
+| `del_path <name>` | Delete a saved path |
+| `del_all_paths` | Delete all paths |
+
+### Pillar Pick & Drop Task
+
+| Command | Description |
+|---------|-------------|
+| `set_home` | Save current position as home for all pillar paths |
+| `home` | Move arm to saved home position |
+| `pick1` / `pick2` / `pick3` | Execute pick from pillar 1/2/3 |
+| `drop1` / `drop2` / `drop3` | Execute drop on pillar 1/2/3 |
+| `rec_pick1..3` | Start recording pick path (home auto-added) |
+| `rec_drop1..3` | Start recording drop path (home auto-added) |
+| `pillars` | Show which pillar paths are recorded |
+
+### Setup & Calibration
+
+| Command | Description |
+|---------|-------------|
 | `connect` | Auto-detect and connect to arm |
 | `scan` | Scan for servos 1-6 |
 | `disconnect` | Close connection |
 | `status` | Show connection info |
-| **Calibration** | |
 | `calibrate` | Interactive min/max joint recording |
 | `calload` | Load calibration.json |
 | `calinfo` | Show joint limits and centers |
-| **Motion** | |
+
+### Direct Motion Control
+
+| Command | Description |
+|---------|-------------|
 | `center` | Move all joints to center |
 | `move <id> <deg>` | Move servo (e.g. `move 1 90`) |
 | `read <id>` | Read servo angle |
 | `torque <on\|off>` | Enable/disable all servos |
-| **Paths** | |
-| `start <name>` | Start recording a path |
-| `add` | Record current position as waypoint |
-| `undo` | Remove last recorded waypoint |
-| `save` | Save recorded path |
-| `list_paths` | List all saved paths |
-| `exec <name>` | Execute a saved path |
-| `smooth <name> [sec]` | Execute with smooth cubic spline interpolation |
-| `del_path <name>` | Delete a saved path |
-| `del_all_paths` | Delete all saved paths |
-| **Kinematics** | |
+
+### Kinematics & Gripper
+
+| Command | Description |
+|---------|-------------|
 | `fk <a1,a2,a3,a4,a5,a6>` | Forward kinematics |
 | `ik <x> <y> <z>` | Inverse kinematics |
-| **Gripper / Pick & Place** | |
 | `grip_open` | Open gripper |
 | `grip_close` | Close gripper |
-| `demo <x> <y> <z>` | Pick & place sequence |
-| **Vision** | |
+| `demo <x> <y> <z>` | Pick & place demo |
+
+### Vision (RealSense Camera)
+
+| Command | Description |
+|---------|-------------|
 | `rs_init` | Initialize RealSense camera |
 | `rs_detect` | Detect red objects |
 | `cam_cal` | Interactive camera calibration (Kabsch algorithm) |
@@ -98,35 +134,66 @@ so101_new_calib.urdf      - robot model (URDF)
 
 ## Advanced Features
 
-### Smooth Trajectory Execution
-Use `smooth <path_name> [duration_sec]` to execute paths with cubic spline interpolation for smoother motion:
+### Manual Path Planning Workflow
+The core of this project: record motion sequences by manually positioning the arm, save them, and replay on demand.
+
 ```
-[SO-101]> smooth my_path 8.0    # execute over 8 seconds with smooth curves
+[SO-101]> start pick_task              # start recording
+[SO-101]> move 1 45                    # move arm to position 1
+[SO-101]> add                          # record waypoint
+[SO-101]> move 1 90; move 2 120        # move arm to position 2
+[SO-101]> add                          # record waypoint 2
+[SO-101]> wp                           # list all waypoints
+[SO-101]> wp_replace 2                 # re-record waypoint 2
+[SO-101]> save                         # save path to disk
+[SO-101]> exec pick_task               # replay path
+[SO-101]> smooth pick_task 5           # replay with smooth curves over 5 seconds
+```
+
+### Pillar Pick & Drop Task
+Pre-configured workflow for the ring-on-pillars demo:
+
+```
+[SO-101]> set_home                     # set arm's current position as home
+[SO-101]> rec_pick1                    # start recording pick path (home auto-added)
+[SO-101]> move 1 45; add               # add waypoint 2
+[SO-101]> move 1 30; add               # add waypoint 3
+[SO-101]> save                         # save pick1
+[SO-101]> pick1                        # execute: go home → run pick1
+[SO-101]> drop1                        # execute: go home → run drop1
+```
+
+### Smooth Trajectory Execution
+Execute paths with cubic spline interpolation for smooth, continuous motion:
+```
+[SO-101]> smooth my_path 8.0           # execute over 8 seconds with smooth curves
 ```
 
 ### Camera Calibration
 Interactive camera-to-robot coordinate frame calibration using the Kabsch algorithm:
 ```
-[SO-101]> rs_init                 # initialize RealSense
-[SO-101]> cam_cal                 # start calibration (click objects in video)
-[SO-101]> cam_cal_list            # review collected points
-[SO-101]> cam_cal_del 3           # remove bad point
-[SO-101]> cam_cal                 # recalibrate with remaining points
-[SO-101]> cam_test 250 100 150    # verify transform
+[SO-101]> rs_init                      # initialize RealSense
+[SO-101]> cam_cal                      # start calibration (click objects in video)
+[SO-101]> cam_cal_list                 # review collected points
+[SO-101]> cam_cal_del 3                # remove bad point
+[SO-101]> cam_cal                      # recalibrate with remaining points
+[SO-101]> cam_test 250 100 150         # verify transform
+```
+
+### Path Editing & Refinement
+Fix recorded paths without re-recording everything:
+
+```
+[SO-101]> edit pick_task               # load path for editing
+[SO-101]> wp                           # list waypoints
+[SO-101]> wp_del 2                     # delete bad waypoint
+[SO-101]> wp_goto 3                    # move arm to waypoint 3
+[SO-101]> wp_insert 3                  # insert current position before waypoint 3
+[SO-101]> wp_swap 1 2                  # swap waypoints 1 and 2
+[SO-101]> save                         # save updated path
 ```
 
 ### Path Recording Workflow
-```
-[SO-101]> start pick_task         # start recording
-[SO-101]> move 1 45               # move arm
-[SO-101]> add                     # record waypoint
-[SO-101]> move 1 90
-[SO-101]> add
-[SO-101]> undo                    # remove bad waypoint
-[SO-101]> save                    # save path
-[SO-101]> exec pick_task          # replay later
-[SO-101]> smooth pick_task 5      # smooth replay
-```
 
 ## Recommended Libraries
 
