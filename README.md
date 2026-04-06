@@ -3,8 +3,10 @@
 A unified control system for the SO-101 6-DOF robotic arm that **emphasizes manual path planning and execution** as its core feature. Record motion sequences by moving the arm to key positions, save them, and replay them on demand.
 
 **Videos:**
-- [Demo video](https://youtu.be/MSCIpeYgwzI) - Full workflow demonstration
-- [Quick clip](https://www.youtube.com/shorts/QxqIxc3luc4)
+
+[![Demo video](https://img.youtube.com/vi/MSCIpeYgwzI/0.jpg)](https://youtu.be/MSCIpeYgwzI) - Full workflow demonstration
+
+[![Quick clip](https://img.youtube.com/vi/QxqIxc3luc4/0.jpg)](https://www.youtube.com/shorts/QxqIxc3luc4)
 
 ## Setup
 
